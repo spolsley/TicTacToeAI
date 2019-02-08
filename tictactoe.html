@@ -33,6 +33,46 @@
 			#S6 { top:200px; left:0px; border-right-width:1px; border-top-width:1px; }
 			#S7 { top:200px; left:100px; border-top-width:1px; }
 			#S8 { top:200px; left:200px; border-left-width:1px; border-top-width:1px; }
+			#levels {
+				width:100%;
+			}
+			.level {
+				margin-top:30px;
+				padding:5px;
+				border-top:1px solid black;
+				width:100%;
+				clear:left;
+			}
+			.gameboardnext {
+				position:relative;
+				border:1px solid black;
+				float:left;
+				height:60px;
+				width:60px;
+				margin:5px;
+			}
+			.spacenext {
+				position: absolute;
+				margin:0px;
+				padding:0px;
+				height:20px;
+				width:20px;
+				font-size:12px;
+				text-align:center;
+				line-height:20px;
+				border-width:0px;
+				border-style:solid;
+				border-color:black;
+			}
+			#S0next { top:0px; left:0px; border-right-width:1px; border-bottom-width:1px; }
+			#S1next { top:0px; left:20px; border-bottom-width:1px; }
+			#S2next { top:0px; left:40px; border-left-width:1px; border-bottom-width:1px; }
+			#S3next { top:20px; left:0px; border-right-width:1px;}
+			#S4next { top:20px; left:20px; }
+			#S5next { top:20px; left:40px; border-left-width:1px; }
+			#S6next { top:40px; left:0px; border-right-width:1px; border-top-width:1px; }
+			#S7next { top:40px; left:20px; border-top-width:1px; }
+			#S8next { top:40px; left:40px; border-left-width:1px; border-top-width:1px; }
 		</style>
 		<script type="text/javascript">
 			var end = false;
@@ -41,6 +81,9 @@
 			var playerSide = "X";
 			var computerSide = "O";
 			var showProb = false;
+			var maxDepth = -1;
+			var visitedStates = [];
+			var showDepth = false;
 			function userPlay(id) {
 				if ((id.innerHTML != "") || (end)) return;
 				id.innerHTML = playerSide;
@@ -62,7 +105,14 @@
 			}
 			function computerPlay() {
 				if (end) return;
-				var move = ai(plays,computerSide,computerSide,true);
+				maxDepth = -1;
+				visitedStates = [];
+				document.getElementById('levels').innerHTML = "";
+				var move = ai(plays,computerSide,computerSide,0);
+				if (showDepth) {
+					var l = document.getElementById('levels');
+					l.removeChild(l.childNodes[maxDepth]);
+				}
 				document.getElementById("S" + move).innerHTML = computerSide;
 				plays[move] = computerSide;
 				turn++;
@@ -79,7 +129,16 @@
 				}
 				return;
 			}
-			function ai(state,player,currPlayer,topLevel) {
+			function ai(state,player,currPlayer,currDepth) {
+				if ((currDepth > maxDepth) && showDepth) {
+					var newLevel = document.createElement('div');
+					newLevel.id = "level" + currDepth;
+					newLevel.className = "level";
+					newLevel.innerHTML = "Depth " + currDepth + "<br>";
+					document.getElementById("levels").appendChild(newLevel);
+					maxDepth = currDepth;
+				}
+				var nextLevel = currDepth + 1;
 				var availableMoves = [];
 				for (var i = 0; i < 9; i++) {
 					if (state[i] == i) availableMoves.push(i);
@@ -97,20 +156,23 @@
 					if (currPlayer == "X") nextPlayer = "O";
 					else nextPlayer = "X";
 					nextState[availableMoves[j]] = currPlayer;
+					if (showDepth) {
+						showState(nextState,currDepth);
+					}
 					var winner = endgame(nextState);
-					if (!topLevel) {
+					if (currDepth != 0) {
 						if (winner == player) {return 1;}
 						else if (winner == "") {
-							moves[availableMoves[j]] = ai(nextState,player,nextPlayer,false);
+							moves[availableMoves[j]] = ai(nextState,player,nextPlayer,nextLevel);
 						}
 						else {return -1;}
 					}
 					else {
 						if (winner == player) {return availableMoves[j];}
-						else {moves[availableMoves[j]] = ai(nextState,player,nextPlayer,false);}
+						else {moves[availableMoves[j]] = ai(nextState,player,nextPlayer,nextLevel);}
 					}
 				}
-				if (!topLevel) {
+				if (currDepth != 0) {
 					var weight = 0;
 					for (var k = 0; k < 9; k++) {
 						if (moves[k] != "n")
@@ -157,9 +219,29 @@
 				else if (this.equal(6,7,8)) {winner = state[6];}
 				return winner;
 			}
+			function showState(state,level) {
+				if (visitedStates.indexOf(state.join("")) != -1) return;
+				visitedStates.push(state.join(""));
+				var board = document.createElement('div');
+				board.className = "gameboardnext";
+				for (var i = 0; i < 9; i++) {
+					var space = document.createElement('div');
+					space.id = "S" + i + "next";
+					space.className = "spacenext";
+					if (state[i] != i) {
+						space.innerHTML = state[i];
+					}
+					board.appendChild(space);
+				}
+				document.getElementById("level" + level).appendChild(board);
+			}
 			function toggleProb() {
 				if (showProb) showProb = false;
 				else showProb = true;
+			}
+			function toggleDepth() {
+				if (showDepth) showDepth = false;
+				else showDepth = true;
 			}
 			function computerBegin() {
 				if (turn == 0) computerPlay();
@@ -168,6 +250,9 @@
 		</script>
 	</head>
 	<body>
+		<div style="text-align:center;">
+			<button type="button" onclick="location.reload()">Reload</button><br><br>
+		</div>
 		<div id="gameboard">
 			<div class="space" id="S0" onclick="userPlay(this)"></div>
 			<div class="space" id="S1" onclick="userPlay(this)"></div>
@@ -181,7 +266,10 @@
 		</div>
 		<div style="position:fixed;top:10px;left:10px;">
 			<button type="button" onclick="computerBegin()">Computer Play First</button><br><br>
-			<input type="checkbox" onclick="toggleProb()"> Show Probabilities
+			<input type="checkbox" onclick="toggleProb()"> Show Probabilities <br>
+			<input type="checkbox" onclick="toggleDepth()"> Show Visited States 
+		</div>
+		<div id="levels">
 		</div>
 	</body>
 </html>
